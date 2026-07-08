@@ -45,10 +45,9 @@ function renderList() {
         ${statusBadge(c.status)}
       </div>
       <div class="meta">
-        ${c.date ? `<span>📅 ${escapeHtml(c.date)}</span>` : ''}
         <span>👥 ${c.player_count} 选手</span>
         <span>📝 ${c.subject_count} 科目</span>
-        ${c.judge_count ? `<span>⚖ ${c.judge_count} 评委</span>` : ''}
+        <span>⚖ ${c.judge_count || 0} 评委</span>
       </div>
       <div class="desc">${c.description ? escapeHtml(c.description) : '<span class="text-muted">暂无描述</span>'}</div>
       <div class="footer">
@@ -79,12 +78,9 @@ function openCreateModal() {
     <div class="modal-body">
       <div class="form-row">
         <div class="form-group"><label>比赛名称 <span class="req">*</span></label><input id="c-name" placeholder="请输入比赛名称"></div>
-        <div class="form-group"><label>比赛日期</label><input type="date" id="c-date"></div>
+        <div class="form-group"><label>评委个数 <span class="req">*</span></label><input type="number" id="c-judge" min="1" value="3" placeholder="如 5"></div>
       </div>
-      <div class="form-row">
-        <div class="form-group"><label>比赛地点</label><input id="c-location" placeholder="选填"></div>
-        <div class="form-group"><label>备注说明</label><input id="c-desc" placeholder="选填"></div>
-      </div>
+      <div class="form-group"><label>备注说明</label><input id="c-desc" placeholder="选填"></div>
       <div class="form-group">
         <label>评分科目 <span class="req">*</span></label>
         <div class="hint mb">至少配置一个科目；科目顺序即录入与计分顺序。</div>
@@ -114,17 +110,18 @@ function addSubjectRow(name = '', maxScore = 100) {
 async function submitCreate() {
   const name = document.getElementById('c-name').value.trim();
   if (!name) { toast('请输入比赛名称', 'error'); return; }
+  const judge_count = parseInt(document.getElementById('c-judge').value, 10);
+  if (!judge_count || judge_count < 1) { toast('请输入有效的评委个数', 'error'); return; }
   const subjects = collectSubjects();
   if (!subjects) return;
   const body = {
     name,
-    date: document.getElementById('c-date').value,
-    location: document.getElementById('c-location').value.trim(),
+    judge_count,
     description: document.getElementById('c-desc').value.trim(),
     subjects,
   };
   try {
-    const res = await API.post('/api/competitions', body);
+    await API.post('/api/competitions', body);
     toast('创建成功', 'success');
     closeModal();
     loadCompetitions();

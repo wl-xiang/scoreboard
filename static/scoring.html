@@ -22,13 +22,13 @@
 
       <!-- 计分前置设置（未开始时） -->
       <div class="card" id="setup-card">
-        <div class="card-title"><span class="bar"></span>计分前置设置</div>
-        <p class="text-muted mb">开始计分前，请先设置本次比赛的评委总个数。开始后将进入计分录入界面，且比赛属性与选手信息将被锁定。</p>
+        <div class="card-title"><span class="bar"></span>计分前置确认</div>
+        <p class="text-muted mb">请确认以下比赛配置，点击「开始计分」后将进入计分录入界面，且比赛属性与选手信息将被锁定。</p>
         <div class="form-row">
           <div class="form-group">
-            <label>评委总个数 <span class="req">*</span></label>
-            <input type="number" id="judge-count" min="1" value="3" placeholder="如 5">
-            <div class="hint">评委个数用于控制填分进度与最终平均分计算。</div>
+            <label>评委个数</label>
+            <input id="judge-count-display" disabled>
+            <div class="hint">评委个数在比赛创建时已设置，如需修改请返回详情页编辑。</div>
           </div>
           <div class="form-group">
             <label>当前选手数</label>

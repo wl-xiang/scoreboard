@@ -156,10 +156,10 @@ function renderTopbar(active) {
   const host = document.getElementById('topbar');
   if (!host) return;
   host.innerHTML = `
-    <div class="brand">
+    <a class="brand" href="/index.html" style="color:inherit" title="返回主页">
       <span class="logo">🏆</span>
       <span>比赛计分管理系统</span>
-    </div>
+    </a>
     <div class="user-area">
       <span class="uname">👤 ${escapeHtml(Auth.getUsername() || '管理员')}</span>
       <button class="btn btn-sm btn-ghost" style="color:#fff" onclick="logout()">退出登录</button>

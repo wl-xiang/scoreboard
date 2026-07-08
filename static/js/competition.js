@@ -31,8 +31,6 @@ function renderCompetition() {
   document.getElementById('c-info').innerHTML = `
     <tr><td style="width:140px;color:var(--muted)">比赛名称</td><td>${escapeHtml(c.name)}</td>
         <td style="width:140px;color:var(--muted)">比赛状态</td><td>${statusBadge(c.status)}</td></tr>
-    <tr><td style="color:var(--muted)">比赛日期</td><td>${escapeHtml(c.date) || '<span class="text-muted">未设置</span>'}</td>
-        <td style="color:var(--muted)">比赛地点</td><td>${escapeHtml(c.location) || '<span class="text-muted">未设置</span>'}</td></tr>
     <tr><td style="color:var(--muted)">评委个数</td><td>${c.judge_count || '<span class="text-muted">未设置</span>'}</td>
         <td style="color:var(--muted)">创建时间</td><td>${escapeHtml(c.created_at)}</td></tr>
     <tr><td style="color:var(--muted)">备注说明</td><td colspan="3">${escapeHtml(c.description) || '<span class="text-muted">无</span>'}</td></tr>`;
@@ -138,12 +136,9 @@ function openEditModal() {
     <div class="modal-body">
       <div class="form-row">
         <div class="form-group"><label>比赛名称 <span class="req">*</span></label><input id="e-name" value="${escapeHtml(c.name)}"></div>
-        <div class="form-group"><label>比赛日期</label><input type="date" id="e-date" value="${escapeHtml(c.date)}"></div>
+        <div class="form-group"><label>评委个数 <span class="req">*</span></label><input type="number" id="e-judge" min="1" value="${c.judge_count || 1}"></div>
       </div>
-      <div class="form-row">
-        <div class="form-group"><label>比赛地点</label><input id="e-location" value="${escapeHtml(c.location)}"></div>
-        <div class="form-group"><label>备注说明</label><input id="e-desc" value="${escapeHtml(c.description)}"></div>
-      </div>
+      <div class="form-group"><label>备注说明</label><input id="e-desc" value="${escapeHtml(c.description)}"></div>
       <div class="form-group">
         <label>评分科目 <span class="req">*</span></label>
         <div id="edit-subject-list"></div>
@@ -188,12 +183,13 @@ function collectEditSubjects() {
 async function submitEdit(action) {
   const name = document.getElementById('e-name').value.trim();
   if (!name) { toast('请输入比赛名称', 'error'); return; }
+  const judge_count = parseInt(document.getElementById('e-judge').value, 10);
+  if (!judge_count || judge_count < 1) { toast('请输入有效的评委个数', 'error'); return; }
   const subjects = collectEditSubjects();
   if (!subjects) return;
   const body = {
     name,
-    date: document.getElementById('e-date').value,
-    location: document.getElementById('e-location').value.trim(),
+    judge_count,
     description: document.getElementById('e-desc').value.trim(),
     subjects,
   };
