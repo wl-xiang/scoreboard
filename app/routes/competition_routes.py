@@ -79,12 +79,18 @@ def create_competition():
     subjects, err = _parse_subjects(data)
     if err:
         return jsonify({'code': 400, 'message': err}), 400
+    # 评委个数在创建时即设置
+    try:
+        judge_count = int(data.get('judge_count'))
+    except (ValueError, TypeError):
+        return jsonify({'code': 400, 'message': '请输入有效的评委个数'}), 400
+    if judge_count < 1:
+        return jsonify({'code': 400, 'message': '评委个数至少为 1'}), 400
 
     c = Competition(
         name=name,
         description=data.get('description') or '',
-        location=data.get('location') or '',
-        date=data.get('date') or '',
+        judge_count=judge_count,
         status='draft',
     )
     db.session.add(c)
@@ -128,12 +134,18 @@ def update_competition(cid):
     subjects, err = _parse_subjects(data)
     if err:
         return jsonify({'code': 400, 'message': err}), 400
+    # 评委个数在编辑时也可调整
+    try:
+        judge_count = int(data.get('judge_count'))
+    except (ValueError, TypeError):
+        return jsonify({'code': 400, 'message': '请输入有效的评委个数'}), 400
+    if judge_count < 1:
+        return jsonify({'code': 400, 'message': '评委个数至少为 1'}), 400
 
     fields = dict(
         name=name,
         description=data.get('description') or '',
-        location=data.get('location') or '',
-        date=data.get('date') or '',
+        judge_count=judge_count,
     )
 
     if action == 'save_as_new':
@@ -169,19 +181,13 @@ def delete_competition(cid):
 @competition_bp.route('/competitions/<int:cid>/start', methods=['POST'])
 @require_auth
 def start_competition(cid):
-    """开始比赛：设置评委个数，状态转为进行中。"""
+    """开始比赛：状态转为进行中。评委个数在创建时已设置，这里仅做校验。"""
     c = Competition.query.get_or_404(cid)
-    data = request.get_json(silent=True) or {}
-    try:
-        judge_count = int(data.get('judge_count'))
-    except (ValueError, TypeError):
-        return jsonify({'code': 400, 'message': '请输入有效的评委个数'}), 400
-    if judge_count < 1:
-        return jsonify({'code': 400, 'message': '评委个数至少为 1'}), 400
+    if c.judge_count < 1:
+        return jsonify({'code': 400, 'message': '请先在比赛信息中设置评委个数'}), 400
     if not Player.query.filter_by(competition_id=c.id).first():
         return jsonify({'code': 400, 'message': '请先添加至少一名选手'}), 400
     c.status = 'ongoing'
-    c.judge_count = judge_count
     c.current_judge = 1
     db.session.commit()
     return jsonify({'code': 0, 'message': '比赛已开始', 'data': comp_to_dict(c)})

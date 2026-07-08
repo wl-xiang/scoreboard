@@ -31,22 +31,25 @@ async function init() {
   }
 }
 
-/* ---------- 计分前置设置 ---------- */
+/* ---------- 计分前置设置（已不需要输入评委个数，仅确认开始） ---------- */
 function showSetup() {
   document.getElementById('setup-card').classList.remove('hide');
   document.getElementById('scoring-ui').classList.add('hide');
   document.getElementById('player-count').value = (comp.players || []).length + ' 人';
+  document.getElementById('judge-count-display').value = (comp.judge_count || 0) + ' 人';
 }
 
 async function startScoring() {
-  const n = parseInt(document.getElementById('judge-count').value, 10);
-  if (!n || n < 1) { toast('请输入有效的评委个数', 'error'); return; }
+  if (!comp.judge_count || comp.judge_count < 1) {
+    toast('请先在比赛信息中设置评委个数', 'error');
+    return;
+  }
   if (!(comp.players || []).length) {
     toast('请先在比赛详情页添加选手', 'error');
     return;
   }
   try {
-    await API.post('/api/competitions/' + CID + '/start', { judge_count: n });
+    await API.post('/api/competitions/' + CID + '/start', {});
     toast('比赛已开始', 'success');
     setTimeout(() => location.reload(), 400);
   } catch (err) { toast(err.message, 'error'); }
