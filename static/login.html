@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登录 · 比赛计分管理系统</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-card">
+      <div class="logo-wrap">
+        <div class="logo-circle">🏆</div>
+        <h1>比赛计分管理系统</h1>
+        <p class="tagline">Competition Scoring System</p>
+      </div>
+      <form id="login-form">
+        <div class="form-group">
+          <label>用户名</label>
+          <input type="text" id="username" autocomplete="username" placeholder="请输入用户名" required>
+        </div>
+        <div class="form-group">
+          <label>密码</label>
+          <input type="password" id="password" autocomplete="current-password" placeholder="请输入密码" required>
+        </div>
+        <button type="submit" class="btn btn-primary" id="login-btn">登 录</button>
+      </form>
+      <div class="login-tip">默认账号 <code>qyjx</code> / 密码 <code>qyjx</code></div>
+    </div>
+  </div>
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/login.js"></script>
+</body>
+</html>

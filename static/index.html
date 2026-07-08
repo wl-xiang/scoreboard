@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>比赛列表 · 比赛计分管理系统</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <header class="topbar" id="topbar"></header>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="main">
+      <div class="page-head">
+        <div>
+          <h1>比赛列表</h1>
+          <div class="sub">创建、管理比赛与进行中的赛事</div>
+        </div>
+        <button class="btn btn-primary" onclick="openCreateModal()">+ 新建比赛</button>
+      </div>
+      <div class="stat-row" id="stat-row"></div>
+      <div id="comp-list"></div>
+    </main>
+  </div>
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/home.js"></script>
+</body>
+</html>

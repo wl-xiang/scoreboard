@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>比赛结果 · 比赛计分管理系统</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <header class="topbar" id="topbar"></header>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="main">
+      <div class="page-head">
+        <div>
+          <a href="/history.html" class="text-muted" style="font-size:12px">← 返回历史记录</a>
+          <h1 id="r-title" style="margin-top:6px">比赛结果</h1>
+          <div class="sub" id="r-sub"></div>
+        </div>
+        <div class="flex gap">
+          <button class="btn" onclick="exportResult('simple')">导出精简版</button>
+          <button class="btn btn-primary" onclick="exportResult('detailed')">导出详细版</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="bar"></span>比赛信息</div>
+        <div class="table-wrap"><table class="data"><tbody id="r-info"></tbody></table></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span class="bar"></span>最终排名
+          <span class="text-muted" style="font-weight:400;font-size:12px;margin-left:auto" id="r-tip"></span>
+        </div>
+        <div class="table-wrap">
+          <table class="data" id="result-table">
+            <thead id="r-head"></thead>
+            <tbody id="r-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/result.js"></script>
+</body>
+</html>
