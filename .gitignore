@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.venv/
+venv/
+env/
+.env
+
+# 持久化数据（SQLite 等），不入仓库
+data/
+*.db
+*.sqlite*
+
+# 编辑器 / IDE
+.idea/
+.vscode/
+.trae/
