@@ -42,19 +42,6 @@
       <!-- 计分主界面（进行中时） -->
       <div id="scoring-ui" class="hide">
         <div class="card">
-          <div class="card-title"><span class="bar"></span>评委填分进度</div>
-          <div class="progress-info mb">
-            <div class="progress-text" id="progress-text">0 / 0</div>
-            <div class="progress-bar"><div class="fill" id="progress-fill" style="width:0%"></div></div>
-            <div class="flex gap-sm center">
-              <select id="judge-select" style="width:auto" onchange="changeJudge(this.value)"></select>
-              <button class="btn btn-sm" onclick="nextJudge()">下一个评委 →</button>
-            </div>
-          </div>
-          <div class="hint">提示：当前录入第 <b id="cur-judge">1</b> 位评委评分；未打分的评委按 0 分计算。</div>
-        </div>
-
-        <div class="card">
           <div class="card-title">
             <span class="bar"></span>计分规则
             <span class="text-muted" style="font-weight:400;font-size:12px;margin-left:auto">勾选后排行榜实时更新</span>

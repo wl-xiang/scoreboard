@@ -1,4 +1,4 @@
-/* 计分页逻辑：前置设置、双模式录入、实时排行榜、评委轮次 */
+/* 计分页逻辑：前置设置、以选手为单位录入各评委评分、实时排行榜 */
 const CID = qs('id');
 let comp = null;
 
@@ -59,50 +59,11 @@ async function startScoring() {
 async function showScoringUI() {
   document.getElementById('setup-card').classList.add('hide');
   document.getElementById('scoring-ui').classList.remove('hide');
-  // 评委选择下拉
-  const sel = document.getElementById('judge-select');
-  sel.innerHTML = '';
-  for (let i = 1; i <= comp.judge_count; i++) {
-    const o = document.createElement('option');
-    o.value = i; o.textContent = '评委 ' + i;
-    sel.appendChild(o);
-  }
   // 操作按钮
   document.getElementById('s-actions').innerHTML =
     `<a class="btn" href="/competition.html?id=${CID}">比赛详情</a>` +
     `<a class="btn btn-primary" href="/result.html?id=${CID}">查看当前结果</a>`;
   await Promise.all([loadLeaderboard(), loadScores()]);
-}
-
-async function changeJudge(val) {
-  try {
-    await API.put('/api/competitions/' + CID + '/current-judge', { judge_index: parseInt(val, 10) });
-    comp.current_judge = parseInt(val, 10);
-    renderProgress();
-  } catch (err) { toast(err.message, 'error'); }
-}
-
-async function nextJudge() {
-  if (comp.current_judge >= comp.judge_count) {
-    toast('已是最后一位评委', 'info');
-    return;
-  }
-  try {
-    const res = await API.post('/api/competitions/' + CID + '/next-judge');
-    comp.current_judge = res.data.current_judge;
-    document.getElementById('judge-select').value = comp.current_judge;
-    renderProgress();
-    toast('已切换至评委 ' + comp.current_judge, 'info');
-  } catch (err) { toast(err.message, 'error'); }
-}
-
-function renderProgress() {
-  const cur = comp.current_judge;
-  const n = comp.judge_count;
-  document.getElementById('progress-text').textContent = cur + ' / ' + n;
-  document.getElementById('progress-fill').style.width = (n ? (cur / n * 100) : 0) + '%';
-  document.getElementById('cur-judge').textContent = cur;
-  document.getElementById('judge-select').value = cur;
 }
 
 /* ---------- 计分规则 ---------- */
@@ -120,11 +81,9 @@ async function loadLeaderboard() {
   try {
     const res = await API.get('/api/competitions/' + CID + '/leaderboard');
     const d = res.data;
-    comp.current_judge = d.current_judge;
     comp.judge_count = d.judge_count;
     document.getElementById('opt-remove-max').checked = d.remove_max;
     document.getElementById('opt-remove-min').checked = d.remove_min;
-    renderProgress();
     renderLeaderboard(d);
   } catch (err) { toast(err.message, 'error'); }
 }
@@ -161,10 +120,12 @@ function renderLeaderboard(d) {
 }
 
 /* ---------- 计分记录列表 ---------- */
+let scoresCache = [];
 async function loadScores() {
   try {
     const res = await API.get('/api/competitions/' + CID + '/scores');
-    renderScoreRecords(res.data || []);
+    scoresCache = res.data || [];
+    renderScoreRecords(scoresCache);
   } catch (err) { toast(err.message, 'error'); }
 }
 
@@ -211,33 +172,73 @@ function renderScoreRecords(scores) {
   }).join('');
 }
 
-/* ---------- 添加 / 编辑计分弹窗（双模式） ---------- */
-function openScoreModal(playerId, judgeIndex) {
+/* ---------- 添加 / 编辑计分弹窗：以选手为单位逐个录入各评委评分 ---------- */
+let scoreModalState = null;
+
+/* 从缓存中提取某选手各评委的已有计分，结构：{ judge_index: { subject_id: score } } */
+function buildExistingByJudge(playerId) {
+  const map = {};
+  scoresCache.filter(s => s.player_id === playerId).forEach(s => {
+    (map[s.judge_index] = map[s.judge_index] || {})[s.subject_id] = s.score;
+  });
+  return map;
+}
+
+async function openScoreModal(playerId, judgeIndex) {
+  const players = comp.players || [];
+  if (!players.length) { toast('请先添加选手', 'error'); return; }
+  const targetId = playerId || players[0].id;
+  const existingByJudge = buildExistingByJudge(targetId);
+
+  scoreModalState = {
+    playerId: targetId,
+    currentJudge: judgeIndex || 1,
+    editing: !!playerId,
+    existingByJudge,
+    enteredJudges: new Set(Object.keys(existingByJudge).map(Number)),
+  };
+  renderScoreModal();
+}
+
+function renderScoreModal() {
+  const state = scoreModalState;
+  if (!state) return;
   const players = comp.players || [];
   const subjects = comp.subjects || [];
-  const editing = !!playerId;
-  const judge = judgeIndex || comp.current_judge;
-  const existing = getExisting(playerId, judge);
+  const n = comp.judge_count || 0;
+  const enteredCount = state.enteredJudges.size;
 
   const playerOpts = players.map(p =>
-    `<option value="${p.id}" ${p.id === playerId ? 'selected' : ''}>${escapeHtml(p.seq + '. ' + p.name)}</option>`).join('');
+    `<option value="${p.id}" ${p.id === state.playerId ? 'selected' : ''}>${escapeHtml(p.seq + '. ' + p.name)}</option>`).join('');
+
+  const judgePills = Array.from({ length: n }, (_, i) => {
+    const j = i + 1;
+    const entered = state.enteredJudges.has(j);
+    const active = j === state.currentJudge;
+    const cls = ['judge-pill'];
+    if (active) cls.push('active');
+    if (entered) cls.push('entered');
+    return `<button type="button" class="${cls.join(' ')}" onclick="switchJudgeInModal(${j})">${j}${entered ? '✓' : ''}</button>`;
+  }).join('');
+
+  const existing = state.existingByJudge[state.currentJudge] || {};
 
   openModal(`
-    <div class="modal-head"><h3>${editing ? '编辑计分' : '添加计分'}</h3><button class="close" onclick="closeModal()">×</button></div>
+    <div class="modal-head"><h3>${state.editing ? '编辑计分' : '添加计分'}</h3><button class="close" onclick="closeModal()">×</button></div>
     <div class="modal-body">
       <div class="form-row">
         <div class="form-group">
           <label>目标选手 <span class="req">*</span></label>
-          <select id="m-player" ${editing ? 'disabled' : ''}>${playerOpts}</select>
+          <select id="m-player" ${state.editing ? 'disabled' : ''} onchange="onModalPlayerChange(this.value)">${playerOpts}</select>
         </div>
         <div class="form-group">
-          <label>评委</label>
-          <select id="m-judge" ${editing ? 'disabled' : ''}>
-            ${Array.from({ length: comp.judge_count }, (_, i) =>
-              `<option value="${i + 1}" ${i + 1 === judge ? 'selected' : ''}>评委 ${i + 1}</option>`).join('')}
-          </select>
+          <label>评委打分进度 <span class="text-muted" style="font-weight:400">（已录入 <b id="entered-count">${enteredCount}</b> / ${n}）</span></label>
+          <div class="judge-pills">${judgePills}</div>
+          <div class="hint">点击序号切换评委录入；允许某些评委不打分（未录入按 0 分计入）。</div>
         </div>
       </div>
+
+      <div class="cur-judge-banner">当前录入：评委 <b>${state.currentJudge}</b> / ${n}</div>
 
       <div class="form-group">
         <label>录入方式</label>
@@ -264,19 +265,31 @@ function openScoreModal(playerId, judgeIndex) {
       </div>
     </div>
     <div class="modal-foot">
-      <button class="btn" onclick="closeModal()">取消</button>
-      ${editing ? '' : `<button class="btn btn-primary" onclick="saveScore(true)">保存并录入下一评委</button>`}
-      <button class="btn btn-primary" onclick="saveScore(false)">${editing ? '保存修改' : '保存'}</button>
+      <button class="btn" onclick="closeModal()">完成</button>
+      <button class="btn btn-danger" onclick="clearCurrentJudgeScores()">清除该评委</button>
+      <button class="btn btn-primary" onclick="saveCurrentJudge(false)">保存</button>
+      <button class="btn btn-accent" onclick="saveCurrentJudge(true)">保存并下一评委</button>
     </div>`, { size: 'lg' });
 
   renderSubjectInputs(subjects, existing);
 }
 
-function getExisting(playerId, judge) {
-  // 从当前 DOM 已渲染数据中无法获取，需先读取缓存。这里在打开编辑时异步预填。
-  return scoreExistingCache[playerId + '_' + judge] || {};
+function switchJudgeInModal(j) {
+  if (!scoreModalState) return;
+  scoreModalState.currentJudge = j;
+  renderScoreModal();
 }
-let scoreExistingCache = {};
+
+function onModalPlayerChange(playerIdStr) {
+  if (!scoreModalState) return;
+  const playerId = parseInt(playerIdStr, 10);
+  const existingByJudge = buildExistingByJudge(playerId);
+  scoreModalState.playerId = playerId;
+  scoreModalState.existingByJudge = existingByJudge;
+  scoreModalState.enteredJudges = new Set(Object.keys(existingByJudge).map(Number));
+  scoreModalState.currentJudge = 1;
+  renderScoreModal();
+}
 
 function renderSubjectInputs(subjects, existing) {
   const tbody = document.getElementById('subject-inputs');
@@ -312,49 +325,66 @@ function autoExtract() {
   }
 }
 
-async function saveScore(goNext) {
-  const playerId = parseInt(document.getElementById('m-player').value, 10);
-  const judge = parseInt(document.getElementById('m-judge').value, 10);
+async function saveCurrentJudge(goNext) {
+  const state = scoreModalState;
+  if (!state) return;
+  const playerId = state.playerId;
+  const judge = state.currentJudge;
+  if (!playerId) { toast('请选择选手', 'error'); return; }
+
   const inputs = document.querySelectorAll('.subj-score');
   const scores = [];
-  inputs.forEach(inp => {
+  for (const inp of inputs) {
     const sid = parseInt(inp.dataset.sid, 10);
-    const v = inp.value === '' ? 0 : parseFloat(inp.value);
+    const raw = (inp.value || '').trim();
+    const v = raw === '' ? 0 : parseFloat(raw);
     if (isNaN(v)) { toast('存在分数格式错误', 'error'); return; }
     scores.push({ subject_id: sid, score: v });
-  });
+  }
   if (!scores.length) { toast('无科目可保存', 'error'); return; }
+
   try {
     await API.post('/api/competitions/' + CID + '/scores', { player_id: playerId, judge_index: judge, scores });
-    toast('计分已保存', 'success');
-    // 刷新数据
+    toast(`评委 ${judge} 计分已保存`, 'success');
+    // 更新录入状态
+    state.enteredJudges.add(judge);
+    const saved = {};
+    scores.forEach(s => saved[s.subject_id] = s.score);
+    state.existingByJudge[judge] = saved;
+    // 刷新主页数据（同步更新 scoresCache）
     await Promise.all([loadLeaderboard(), loadScores()]);
     if (goNext) {
-      // 切换至下一位评委，保留当前选手，清空输入
-      if (comp.current_judge < comp.judge_count) {
-        await nextJudge();
+      if (state.currentJudge < comp.judge_count) {
+        state.currentJudge++;
       } else {
-        toast('已是最后一位评委，无法继续切换', 'info');
+        toast('已是最后一位评委', 'info');
       }
-      // 重置输入框
-      document.querySelectorAll('.subj-score').forEach(inp => inp.value = '');
-      document.getElementById('fast-input').value = '';
-    } else {
-      closeModal();
     }
+    renderScoreModal();
   } catch (err) { toast(err.message, 'error'); }
 }
 
-async function editRecord(playerId, judge) {
-  // 预填已有分数：从服务端拉取（这里直接用已加载的 scores 渲染数据缓存）
+async function clearCurrentJudgeScores() {
+  const state = scoreModalState;
+  if (!state) return;
+  const ok = await confirmDialog(`确定清除「评委 ${state.currentJudge}」对该选手的全部科目分数吗？`, { danger: true, okText: '确认清除' });
+  // 确认弹窗会替换 modal 内容，无论确认与否都需要重建计分弹窗
+  if (!ok) { renderScoreModal(); return; }
   try {
-    const res = await API.get('/api/competitions/' + CID + '/scores');
-    const map = {};
-    res.data.filter(s => s.player_id === playerId && s.judge_index === judge).forEach(s => map[s.subject_id] = s.score);
-    scoreExistingCache = {};
-    scoreExistingCache[playerId + '_' + judge] = map;
-    openScoreModal(playerId, judge);
-  } catch (err) { toast(err.message, 'error'); }
+    await API.del('/api/competitions/' + CID + '/scores', { player_id: state.playerId, judge_index: state.currentJudge });
+    toast('已清除该评委评分', 'success');
+    state.enteredJudges.delete(state.currentJudge);
+    delete state.existingByJudge[state.currentJudge];
+    await Promise.all([loadLeaderboard(), loadScores()]);
+    renderScoreModal();
+  } catch (err) {
+    toast(err.message, 'error');
+    renderScoreModal();
+  }
+}
+
+function editRecord(playerId, judge) {
+  openScoreModal(playerId, judge);
 }
 
 async function deleteRecord(playerId, judge) {
