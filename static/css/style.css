@@ -413,6 +413,14 @@ table.data .actions { display: flex; gap: 6px; justify-content: center; }
 .checkbox-row label { display: flex; align-items: center; gap: 7px; font-weight: 500; cursor: pointer; }
 .checkbox-row input { width: auto; }
 
+/* ---------- 计分记录：按选手折叠 ---------- */
+table.data tr.record-group-row { background: #f4f7fd; }
+table.data tr.record-group-row:hover { background: #eef3fc; }
+table.data tr.record-group-row td { border-bottom: 1px solid var(--border); }
+table.data tr.record-group-row .record-hint { font-size: 12px; }
+table.data tr.record-detail-row td { background: #fff; font-size: 12.5px; }
+table.data tr.record-detail-row:first-child td { border-top: 0; }
+
 /* ---------- 计分弹窗：评委进度 pills ---------- */
 .judge-pills {
   display: flex;

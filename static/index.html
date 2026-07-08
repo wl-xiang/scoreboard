@@ -16,7 +16,10 @@
           <h1>比赛列表</h1>
           <div class="sub">创建、管理比赛与进行中的赛事</div>
         </div>
-        <button class="btn btn-primary" onclick="openCreateModal()">+ 新建比赛</button>
+        <div class="flex gap">
+          <button class="btn" onclick="location.href='/history.html'">📦 历史记录</button>
+          <button class="btn btn-primary" onclick="openCreateModal()">+ 新建比赛</button>
+        </div>
       </div>
       <div class="stat-row" id="stat-row"></div>
       <div id="comp-list"></div>

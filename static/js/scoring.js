@@ -70,8 +70,9 @@ async function showScoringUI() {
 async function updateCalcOptions() {
   const remove_max = document.getElementById('opt-remove-max').checked;
   const remove_min = document.getElementById('opt-remove-min').checked;
+  const remove_zero = document.getElementById('opt-remove-zero').checked;
   try {
-    await API.put('/api/competitions/' + CID + '/calc-options', { remove_max, remove_min });
+    await API.put('/api/competitions/' + CID + '/calc-options', { remove_max, remove_min, remove_zero });
     await loadLeaderboard();
   } catch (err) { toast(err.message, 'error'); }
 }
@@ -84,6 +85,7 @@ async function loadLeaderboard() {
     comp.judge_count = d.judge_count;
     document.getElementById('opt-remove-max').checked = d.remove_max;
     document.getElementById('opt-remove-min').checked = d.remove_min;
+    document.getElementById('opt-remove-zero').checked = d.remove_zero;
     renderLeaderboard(d);
   } catch (err) { toast(err.message, 'error'); }
 }
@@ -119,8 +121,10 @@ function renderLeaderboard(d) {
   document.getElementById('lb-tip').textContent = '共 ' + players.length + ' 名选手';
 }
 
-/* ---------- 计分记录列表 ---------- */
+/* ---------- 计分记录列表：按选手折叠展示 ---------- */
 let scoresCache = [];
+let expandedPlayers = new Set();   // 已展开的选手 id 集合，跨重渲染保留状态
+
 async function loadScores() {
   try {
     const res = await API.get('/api/competitions/' + CID + '/scores');
@@ -130,46 +134,104 @@ async function loadScores() {
 }
 
 function renderScoreRecords(scores) {
+  const thead = document.getElementById('score-head');
   const tbody = document.getElementById('score-records');
   const players = comp.players || [];
   const subjects = comp.subjects || [];
-  // 按 (player, judge) 分组
+
+  // 表头：选手 | 评委 | 各科目 | 小计 | 操作
+  let head = '<tr><th>选手</th><th class="num">评委</th>';
+  subjects.forEach(s => { head += `<th class="num">${escapeHtml(s.name)}</th>`; });
+  head += '<th class="num">小计</th><th class="num">操作</th></tr>';
+  thead.innerHTML = head;
+
+  // 按选手分组：player_id -> { judge_index -> { subject_id -> score } }
   const groups = {};
   scores.forEach(s => {
-    const key = s.player_id + '_' + s.judge_index;
-    (groups[key] = groups[key] || { player_id: s.player_id, judge_index: s.judge_index, map: {} }).map[s.subject_id] = s.score;
+    if (!groups[s.player_id]) groups[s.player_id] = {};
+    if (!groups[s.player_id][s.judge_index]) groups[s.player_id][s.judge_index] = {};
+    groups[s.player_id][s.judge_index][s.subject_id] = s.score;
   });
-  const keys = Object.keys(groups);
-  if (!keys.length) {
-    tbody.innerHTML = `<tr><td colspan="5" class="text-muted" style="text-align:center;padding:20px">暂无计分记录，点击「添加计分」开始录入</td></tr>`;
+
+  const playerIds = Object.keys(groups).map(Number);
+  const colCount = subjects.length + 4;  // 选手 + 评委 + 科目们 + 小计 + 操作
+  if (!playerIds.length) {
+    tbody.innerHTML = `<tr><td colspan="${colCount}" class="text-muted" style="text-align:center;padding:20px">暂无计分记录，点击「添加计分」开始录入</td></tr>`;
     return;
   }
-  // 排序：选手编号、评委序号
-  keys.sort((a, b) => {
-    const ga = groups[a], gb = groups[b];
-    const pa = players.find(p => p.id === ga.player_id);
-    const pb = players.find(p => p.id === gb.player_id);
-    return ((pa && pa.seq) || 0) - ((pb && pb.seq) || 0) || ga.judge_index - gb.judge_index;
+
+  // 按选手编号排序
+  playerIds.sort((a, b) => {
+    const pa = players.find(p => p.id === a);
+    const pb = players.find(p => p.id === b);
+    return ((pa && pa.seq) || 0) - ((pb && pb.seq) || 0);
   });
-  tbody.innerHTML = keys.map(k => {
-    const g = groups[k];
-    const p = players.find(x => x.id === g.player_id) || { name: '(已删除)' };
-    const detail = subjects.map(s => {
-      const v = g.map[s.id];
-      return `<span class="tag">${escapeHtml(s.name)}: ${v != null ? v : 0}</span>`;
-    }).join(' ');
-    const subtotal = subjects.reduce((sum, s) => sum + (g.map[s.id] || 0), 0);
-    return `<tr>
-      <td>${escapeHtml(p.name)}</td>
-      <td class="num">评委${g.judge_index}</td>
-      <td>${detail}</td>
-      <td class="num fw-700">${subtotal.toFixed(4).replace(/\.?0+$/, '')}</td>
+
+  const totalJudges = comp.judge_count || 0;
+  let html = '';
+  playerIds.forEach(pid => {
+    const p = players.find(x => x.id === pid) || { name: '(已删除)', seq: '?' };
+    const judgeMap = groups[pid];
+    const judgeIndexes = Object.keys(judgeMap).map(Number).sort((a, b) => a - b);
+    const enteredCount = judgeIndexes.length;
+    const expanded = expandedPlayers.has(pid);
+    const judgeSpan = subjects.length + 1;  // 科目列 + 小计列合并展示
+
+    // 选手首行：选手信息 + 录入进度 + 操作按钮
+    html += `<tr class="record-group-row">
+      <td class="fw-700">${escapeHtml(p.seq + '. ' + p.name)}</td>
+      <td class="num">${enteredCount}/${totalJudges || enteredCount} 已录入</td>
+      <td colspan="${judgeSpan}" class="text-muted record-hint">${expanded ? '' : '点击「查看」展开各评委评分'}</td>
       <td class="num"><div class="actions">
-        <button class="btn-link" onclick="editRecord(${g.player_id}, ${g.judge_index})">编辑</button>
-        <button class="btn-link danger" onclick="deleteRecord(${g.player_id}, ${g.judge_index})">删除</button>
+        <button class="btn-link" onclick="togglePlayerRecord(${pid})">${expanded ? '折叠' : '查看'}</button>
+        <button class="btn-link" onclick="editRecord(${pid})">编辑</button>
+        <button class="btn-link danger" onclick="deletePlayerRecord(${pid})">删除</button>
       </div></td>
     </tr>`;
-  }).join('');
+
+    // 展开详情：一个评委一行，展示各科目分数与小计
+    if (expanded) {
+      judgeIndexes.forEach(j => {
+        const subjScores = judgeMap[j];
+        let cells = '';
+        let subtotal = 0;
+        subjects.forEach(s => {
+          const v = subjScores[s.id];
+          cells += `<td class="score-cell">${v != null ? v : 0}</td>`;
+          subtotal += (v != null ? v : 0);
+        });
+        html += `<tr class="record-detail-row">
+          <td></td>
+          <td class="num">评委${j}</td>
+          ${cells}
+          <td class="num fw-700">${subtotal.toFixed(4).replace(/\.?0+$/, '')}</td>
+          <td></td>
+        </tr>`;
+      });
+    }
+  });
+  tbody.innerHTML = html;
+}
+
+function togglePlayerRecord(pid) {
+  if (expandedPlayers.has(pid)) expandedPlayers.delete(pid);
+  else expandedPlayers.add(pid);
+  renderScoreRecords(scoresCache);
+}
+
+async function deletePlayerRecord(pid) {
+  const p = (comp.players || []).find(x => x.id === pid);
+  const ok = await confirmDialog(
+    `确定删除「${escapeHtml(p ? p.name : '')}」的全部计分记录吗？<br><span class="text-muted">将清除该选手所有评委的评分，不可恢复。</span>`,
+    { danger: true, okText: '确认删除' });
+  // 确认弹窗会替换 modal 内容，无需重建
+  if (!ok) return;
+  try {
+    await API.del('/api/competitions/' + CID + '/scores', { player_id: pid });
+    toast('已删除', 'success');
+    expandedPlayers.delete(pid);
+    await Promise.all([loadLeaderboard(), loadScores()]);
+  } catch (err) { toast(err.message, 'error'); }
 }
 
 /* ---------- 添加 / 编辑计分弹窗：以选手为单位逐个录入各评委评分 ---------- */
@@ -196,6 +258,7 @@ async function openScoreModal(playerId, judgeIndex) {
     editing: !!playerId,
     existingByJudge,
     enteredJudges: new Set(Object.keys(existingByJudge).map(Number)),
+    mode: 'fast',
   };
   renderScoreModal();
 }
@@ -222,6 +285,7 @@ function renderScoreModal() {
   }).join('');
 
   const existing = state.existingByJudge[state.currentJudge] || {};
+  const isFast = (state.mode || 'fast') === 'fast';
 
   openModal(`
     <div class="modal-head"><h3>${state.editing ? '编辑计分' : '添加计分'}</h3><button class="close" onclick="closeModal()">×</button></div>
@@ -243,23 +307,23 @@ function renderScoreModal() {
       <div class="form-group">
         <label>录入方式</label>
         <div class="mode-switch">
-          <label class="checked" id="lbl-manual"><input type="radio" name="mode" value="manual" checked onchange="switchMode('manual')"> 手动模式</label>
-          <label id="lbl-fast"><input type="radio" name="mode" value="fast" onchange="switchMode('fast')"> 快速模式</label>
+          <label class="${isFast ? '' : 'checked'}" id="lbl-manual"><input type="radio" name="mode" value="manual" ${isFast ? '' : 'checked'} onchange="switchMode('manual')"> 手动模式</label>
+          <label class="${isFast ? 'checked' : ''}" id="lbl-fast"><input type="radio" name="mode" value="fast" ${isFast ? 'checked' : ''} onchange="switchMode('fast')"> 快速模式</label>
         </div>
       </div>
 
-      <div id="manual-area">
+      <div id="manual-area" class="${isFast ? 'hide' : ''}">
         <table class="data score-input-table">
           <thead><tr><th>序号</th><th>科目</th><th>满分</th><th>分数</th></tr></thead>
           <tbody id="subject-inputs"></tbody>
         </table>
       </div>
 
-      <div id="fast-area" class="hide">
+      <div id="fast-area" class="${isFast ? '' : 'hide'}">
         <div class="form-group">
           <label>分数字符串（以空格分隔）</label>
           <textarea id="fast-input" placeholder="例如：9.5 8.7 9.0 9.2"></textarea>
-          <div class="hint">点击下方按钮按科目顺序自动提取；超出科目总数将截取前 N 个。</div>
+          <div class="hint">直接点「保存」也会自动提取；超出科目总数将截取前 N 个。</div>
         </div>
         <button class="btn btn-accent" onclick="autoExtract()">自动提取分数</button>
       </div>
@@ -303,21 +367,35 @@ function renderSubjectInputs(subjects, existing) {
 }
 
 function switchMode(mode) {
+  if (scoreModalState) scoreModalState.mode = mode;
   document.getElementById('manual-area').classList.toggle('hide', mode !== 'manual');
   document.getElementById('fast-area').classList.toggle('hide', mode !== 'fast');
   document.getElementById('lbl-manual').classList.toggle('checked', mode === 'manual');
   document.getElementById('lbl-fast').classList.toggle('checked', mode === 'fast');
 }
 
+/* 将快速模式输入框的分数字符串填入各科目输入框，返回是否成功填充 */
+function applyFastExtract() {
+  const el = document.getElementById('fast-input');
+  if (!el) return false;
+  const raw = el.value.trim();
+  if (!raw) return false;
+  const nums = raw.split(/\s+/).map(x => parseFloat(x)).filter(x => !isNaN(x));
+  if (!nums.length) return false;
+  const inputs = document.querySelectorAll('.subj-score');
+  const n = inputs.length;
+  inputs.forEach((inp, i) => { inp.value = i < nums.length ? nums[i] : ''; });
+  return true;
+}
+
 function autoExtract() {
-  const raw = document.getElementById('fast-input').value.trim();
+  const el = document.getElementById('fast-input');
+  const raw = (el && el.value || '').trim();
   if (!raw) { toast('请输入分数字符串', 'error'); return; }
   const nums = raw.split(/\s+/).map(x => parseFloat(x)).filter(x => !isNaN(x));
   const inputs = document.querySelectorAll('.subj-score');
   const n = inputs.length;
-  inputs.forEach((inp, i) => {
-    inp.value = i < nums.length ? nums[i] : '';
-  });
+  inputs.forEach((inp, i) => { inp.value = i < nums.length ? nums[i] : ''; });
   if (nums.length > n) {
     toast(`已提取前 ${n} 个数字（输入共 ${nums.length} 个）`, 'warning');
   } else {
@@ -331,6 +409,11 @@ async function saveCurrentJudge(goNext) {
   const playerId = state.playerId;
   const judge = state.currentJudge;
   if (!playerId) { toast('请选择选手', 'error'); return; }
+
+  // 快速模式下，若用户忘记点「自动提取」直接保存，则自动提取后再保存
+  if ((state.mode || 'fast') === 'fast' && applyFastExtract()) {
+    toast('已自动提取分数', 'info', 1500);
+  }
 
   const inputs = document.querySelectorAll('.subj-score');
   const scores = [];
@@ -383,19 +466,8 @@ async function clearCurrentJudgeScores() {
   }
 }
 
-function editRecord(playerId, judge) {
-  openScoreModal(playerId, judge);
-}
-
-async function deleteRecord(playerId, judge) {
-  const p = (comp.players || []).find(x => x.id === playerId);
-  const ok = await confirmDialog(`确定删除「${escapeHtml(p ? p.name : '')}」评委 ${judge} 的全部计分吗？`, { danger: true, okText: '确认删除' });
-  if (!ok) return;
-  try {
-    await API.del('/api/competitions/' + CID + '/scores', { player_id: playerId, judge_index: judge });
-    toast('已删除', 'success');
-    await Promise.all([loadLeaderboard(), loadScores()]);
-  } catch (err) { toast(err.message, 'error'); }
+function editRecord(playerId) {
+  openScoreModal(playerId);
 }
 
 /* ---------- 结束比赛 ---------- */

@@ -49,6 +49,7 @@
           <div class="checkbox-row">
             <label><input type="checkbox" id="opt-remove-max" onchange="updateCalcOptions()"> 去掉一个最高分</label>
             <label><input type="checkbox" id="opt-remove-min" onchange="updateCalcOptions()"> 去掉一个最低分</label>
+            <label><input type="checkbox" id="opt-remove-zero" onchange="updateCalcOptions()"> 去除无效评委评分（全 0 评分）</label>
           </div>
         </div>
 
@@ -75,7 +76,7 @@
           </div>
           <div class="table-wrap">
             <table class="data">
-              <thead><tr><th>选手</th><th class="num">评委</th><th>各科目分数</th><th class="num">小计</th><th class="num">操作</th></tr></thead>
+              <thead id="score-head"></thead>
               <tbody id="score-records"></tbody>
             </table>
           </div>

@@ -18,8 +18,9 @@ async function loadResult() {
     const c = infoRes.data;
     document.getElementById('r-title').textContent = c.name;
     document.getElementById('r-sub').innerHTML = statusBadge(c.status) +
-      (c.remove_max || c.remove_min ? ' · <span class="text-muted">已' +
-        (c.remove_max ? '去最高 ' : '') + (c.remove_min ? '去最低 ' : '') + '</span>' : '');
+      (c.remove_max || c.remove_min || c.remove_zero ? ' · <span class="text-muted">已' +
+        (c.remove_max ? '去最高 ' : '') + (c.remove_min ? '去最低 ' : '') +
+        (c.remove_zero ? '去无效评分 ' : '') + '</span>' : '');
 
     document.getElementById('r-info').innerHTML = `
       <tr><td style="width:120px;color:var(--muted)">比赛名称</td><td>${escapeHtml(c.name)}</td>

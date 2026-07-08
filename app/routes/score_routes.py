@@ -144,4 +144,5 @@ def leaderboard(cid):
         'current_judge': c.current_judge,
         'remove_max': c.remove_max,
         'remove_min': c.remove_min,
+        'remove_zero': c.remove_zero,
     }})
