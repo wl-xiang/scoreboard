@@ -445,9 +445,311 @@ table.data .actions { display: flex; gap: 6px; justify-content: center; }
   background: var(--primary-light); color: var(--primary); font-size: 12px; margin: 2px;
 }
 
+/* ===================================================================
+   移动端深度适配
+   重点解决：文字区域过挤导致被拆成多行的问题
+   =================================================================== */
 @media (max-width: 768px) {
+  /* ---------- 基础 ---------- */
+  html, body { font-size: 13px; }
+  * { -webkit-tap-highlight-color: transparent; }
+
+  /* ---------- 顶部导航：允许换行、品牌截断 ---------- */
+  .topbar {
+    height: auto;
+    min-height: 52px;
+    padding: 8px 14px;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+  }
+  .topbar .brand {
+    font-size: 15px;
+    gap: 8px;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .topbar .brand > span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 60vw;
+  }
+  .topbar .brand .logo {
+    width: 28px;
+    height: 28px;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+  .topbar .user-area {
+    gap: 8px;
+    font-size: 12px;
+    flex-shrink: 0;
+    justify-content: flex-end;
+  }
+  .topbar .user-area .uname {
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .topbar .user-area .btn-sm { padding: 5px 10px; font-size: 11px; }
+
+  /* ---------- 布局：隐藏侧栏、收紧主区 ---------- */
   .sidebar { display: none; }
-  .main { padding: 16px; }
-  .form-row { grid-template-columns: 1fr; }
-  .topbar { padding: 0 16px; }
+  .main {
+    padding: 12px;
+    overflow-x: hidden;
+  }
+
+  /* ---------- 页面标题：纵向堆叠、按钮铺满 ---------- */
+  .page-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .page-head h1 { font-size: 18px; }
+  .page-head .sub { font-size: 12px; }
+  .page-head > .flex,
+  .page-head .flex {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .page-head .btn {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-width: 0;
+    padding: 9px 10px;
+    font-size: 12px;
+  }
+
+  /* ---------- 卡片：缩小内边距 ---------- */
+  .card {
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .card-title {
+    font-size: 14px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  /* 卡片标题右侧附加说明文字：允许换行到下一行，不再挤压主标题 */
+  .card-title > span[style*="margin-left:auto"],
+  .card-title > span[style*="margin-left: auto"] {
+    margin-left: 0 !important;
+    flex-basis: 100%;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  /* ---------- 按钮 ---------- */
+  .btn {
+    padding: 8px 12px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .btn-sm { padding: 6px 10px; font-size: 11px; }
+  .btn-link { padding: 4px 4px; font-size: 12px; }
+
+  /* ---------- 表单 ---------- */
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .form-group { margin-bottom: 14px; }
+  .form-group label { font-size: 12px; }
+  input, select, textarea {
+    padding: 9px 10px;
+    font-size: 13px;
+  }
+  /* 防止 iOS 缩放：输入框聚焦时字号不小于 16px */
+  input[type="text"], input[type="password"], input[type="number"],
+  input:not([type]), select, textarea {
+    font-size: 16px;
+  }
+  .hint { font-size: 11px; line-height: 1.5; }
+
+  /* ---------- 表格：更紧凑、单元格不强制换行 ---------- */
+  table.data { font-size: 12px; }
+  table.data th, table.data td {
+    padding: 8px 8px;
+  }
+  table.data th {
+    font-size: 11px;
+    letter-spacing: 0.2px;
+  }
+  /* 信息表格（基础信息 / 比赛信息）：label 列缩窄，避免文字被挤断行 */
+  table.data tbody td[style*="width"] {
+    width: auto !important;
+    min-width: 70px;
+    white-space: nowrap;
+  }
+
+  /* ---------- 比赛列表卡片：单列、操作按钮平分 ---------- */
+  .comp-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .comp-card { padding: 14px; }
+  .comp-card .name {
+    font-size: 15px;
+    word-break: break-word;
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-right: 8px;
+  }
+  .comp-card .meta {
+    gap: 8px 12px;
+    font-size: 11px;
+  }
+  .comp-card .meta span { white-space: nowrap; }
+  .comp-card .desc {
+    font-size: 12px;
+    word-break: break-word;
+  }
+  .comp-card .footer {
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: stretch;
+  }
+  .comp-card .footer .btn {
+    flex: 1 1 calc(50% - 4px);
+    justify-content: center;
+    min-width: 0;
+  }
+
+  /* ---------- 统计卡片：两列 ---------- */
+  .stat-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .stat { padding: 12px 14px; }
+  .stat .label { font-size: 11px; }
+  .stat .value { font-size: 20px; }
+
+  /* ---------- 模态框：接近全屏、缩小内边距 ---------- */
+  .modal-mask { padding: 12px; }
+  .modal-box {
+    max-width: 100%;
+    max-height: 88vh;
+  }
+  .modal-box.lg { max-width: 100%; }
+  .modal-box .modal-head {
+    padding: 14px 16px;
+  }
+  .modal-box .modal-head h3 { font-size: 15px; }
+  .modal-box .modal-head .close { font-size: 24px; }
+  .modal-box .modal-body { padding: 16px; }
+  .modal-box .modal-foot {
+    padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .modal-box .modal-foot .btn {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-width: 0;
+    font-size: 13px;
+  }
+  /* 科目录入行：纵向堆叠，避免横向挤压 */
+  #subject-list > div,
+  #edit-subject-list > div {
+    flex-wrap: wrap;
+  }
+  #subject-list .s-name,
+  #edit-subject-list .s-name {
+    flex: 1 1 100% !important;
+  }
+  #subject-list .s-max,
+  #edit-subject-list .s-max {
+    width: auto !important;
+    flex: 1 1 calc(50% - 4px) !important;
+  }
+  #subject-list .btn-danger,
+  #edit-subject-list .btn-danger {
+    flex: 1 1 calc(50% - 4px) !important;
+  }
+  /* 计分录入弹窗内的输入框 */
+  .score-input-table input { width: 64px; padding: 6px; }
+
+  /* ---------- Toast：左右贴边、不挤压 ---------- */
+  #toast-box {
+    left: 12px;
+    right: 12px;
+    top: 12px;
+  }
+  .toast {
+    min-width: 0;
+    max-width: none;
+    width: 100%;
+    font-size: 12px;
+    padding: 10px 12px;
+  }
+
+  /* ---------- 计分进度条：纵向堆叠，避免文字挤压 ---------- */
+  .progress-info {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .progress-text {
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .progress-bar {
+    flex: 1 1 100%;
+    order: 3;
+  }
+  .progress-info > .flex {
+    flex: 1 1 100%;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .progress-info select { flex: 1 1 auto; min-width: 0; }
+
+  /* ---------- 模式切换、复选框：纵向堆叠 ---------- */
+  .mode-switch {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .mode-switch label {
+    padding: 9px 12px;
+    font-size: 13px;
+  }
+  .checkbox-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  /* ---------- 排行榜 / 名次 ---------- */
+  .rank-medal {
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+  }
+  .final-score { font-size: 14px; }
+
+  /* ---------- 计分记录 tag 列：允许换行 ---------- */
+  table.data td .tag {
+    font-size: 11px;
+    padding: 2px 6px;
+    margin: 2px;
+  }
+
+  /* ---------- 空状态 ---------- */
+  .empty { padding: 32px 16px; }
+  .empty .ico { font-size: 36px; }
+  .empty .txt { font-size: 13px; }
+}
+
+/* ---------- 超小屏幕（iPhone SE 等 ≤ 380px） ---------- */
+@media (max-width: 380px) {
+  .stat-row { grid-template-columns: 1fr; }
+  .topbar .brand > span:last-child { max-width: 50vw; }
+  .comp-card .footer .btn { flex: 1 1 100%; }
+  .modal-box .modal-foot .btn { flex: 1 1 100%; }
+  .page-head .btn { flex: 1 1 100%; }
 }
