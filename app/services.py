@@ -46,11 +46,19 @@ def compute_leaderboard(competition):
             judge_subject_scores[j] = subj_scores
             judge_totals.append(total)    # 未打分评委自动为 0
 
+        has_scores = any(v != 0 for v in judge_totals)
+
+        # 去除无效评委评分（全 0 评分）：将该选手所有科目均为 0 的评委剔除后再计算
+        if competition.remove_zero:
+            valid_totals = [t for t in judge_totals if t != 0]
+        else:
+            valid_totals = list(judge_totals)
+
         # 去掉最高 / 最低分：
         # - 同时去最高/最低：评委数需 ≥3 才生效，否则不处理（兜底保留全部）
         # - 仅去最高或仅去最低：评委数需 ≥2 才生效
         # - 任一规则下都保证至少保留 1 位评委
-        totals = list(judge_totals)
+        totals = list(valid_totals)
         n = len(totals)
         both = competition.remove_max and competition.remove_min
         if both and n >= 3:
@@ -68,7 +76,6 @@ def compute_leaderboard(competition):
             totals = kept
 
         final = round(sum(totals) / len(totals), 4) if totals else 0.0
-        has_scores = any(v != 0 for v in judge_totals)
 
         results.append({
             'player': player,

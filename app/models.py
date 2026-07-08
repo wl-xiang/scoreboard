@@ -26,6 +26,7 @@ class Competition(db.Model):
     current_judge = db.Column(db.Integer, default=1)    # 当前录入的评委序号
     remove_max = db.Column(db.Boolean, default=False)   # 计算时是否去掉一个最高分
     remove_min = db.Column(db.Boolean, default=False)   # 计算时是否去掉一个最低分
+    remove_zero = db.Column(db.Boolean, default=False)  # 计算时是否去除无效评委评分（全 0 评分）
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     subjects = db.relationship(

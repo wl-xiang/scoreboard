@@ -20,6 +20,7 @@ def comp_to_dict(c, include_children=False):
         'current_judge': c.current_judge,
         'remove_max': c.remove_max,
         'remove_min': c.remove_min,
+        'remove_zero': c.remove_zero,
         'created_at': c.created_at.strftime('%Y-%m-%d %H:%M') if c.created_at else '',
         'has_scores': bool(Score.query.filter_by(competition_id=c.id).first()),
         'player_count': Player.query.filter_by(competition_id=c.id).count(),
@@ -208,11 +209,12 @@ def finish_competition(cid):
 @competition_bp.route('/competitions/<int:cid>/calc-options', methods=['PUT'])
 @require_auth
 def update_calc_options(cid):
-    """更新去最高/最低分选项，触发排行榜重新计算。"""
+    """更新去最高/最低分、去除无效评委评分选项，触发排行榜重新计算。"""
     c = Competition.query.get_or_404(cid)
     data = request.get_json(silent=True) or {}
     c.remove_max = bool(data.get('remove_max', False))
     c.remove_min = bool(data.get('remove_min', False))
+    c.remove_zero = bool(data.get('remove_zero', False))
     db.session.commit()
     return jsonify({'code': 0, 'message': '已更新计分规则', 'data': comp_to_dict(c)})
 

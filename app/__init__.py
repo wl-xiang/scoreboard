@@ -56,6 +56,13 @@ def create_app():
     # 初始化数据库与预设账号
     with app.app_context():
         db.create_all()
+        # 轻量迁移：为旧库补齐 remove_zero 列（db.create_all 不会改已存在的表）
+        from sqlalchemy import inspect, text
+        _cols = [c['name'] for c in inspect(db.engine).get_columns('competitions')]
+        if 'remove_zero' not in _cols:
+            with db.engine.begin() as conn:
+                conn.execute(text(
+                    'ALTER TABLE competitions ADD COLUMN remove_zero BOOLEAN DEFAULT 0'))
         from .models import User
         if not User.query.filter_by(username=Config.PRESET_USERNAME).first():
             db.session.add(User(
