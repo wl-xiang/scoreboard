@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>比赛详情 · 比赛计分管理系统</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <header class="topbar" id="topbar"></header>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="main">
+      <div class="page-head">
+        <div>
+          <a href="/index.html" class="text-muted" style="font-size:12px">← 返回比赛列表</a>
+          <h1 id="c-name" style="margin-top:6px">比赛详情</h1>
+          <div class="sub" id="c-sub"></div>
+        </div>
+        <div class="flex gap" id="c-actions"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="bar"></span>基础信息</div>
+        <div class="table-wrap">
+          <table class="data">
+            <tbody id="c-info"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="bar"></span>评分科目</div>
+        <div class="table-wrap">
+          <table class="data" id="subject-table">
+            <thead><tr><th class="num" style="width:80px">序号</th><th>科目名称</th><th class="num">满分</th></tr></thead>
+            <tbody id="c-subjects"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span class="bar"></span>选手管理
+          <span style="margin-left:auto" id="player-add-wrap"></span>
+        </div>
+        <div class="table-wrap">
+          <table class="data">
+            <thead><tr><th class="num">编号</th><th>姓名</th><th>备注</th><th class="num">操作</th></tr></thead>
+            <tbody id="c-players"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/competition.js"></script>
+</body>
+</html>
