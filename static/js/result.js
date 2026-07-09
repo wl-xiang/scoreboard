@@ -23,11 +23,9 @@ async function loadResult() {
         (c.remove_zero ? '去无效评分 ' : '') + '</span>' : '');
 
     document.getElementById('r-info').innerHTML = `
-      <tr><td style="width:120px;color:var(--muted)">比赛名称</td><td>${escapeHtml(c.name)}</td>
-          <td style="width:120px;color:var(--muted)">比赛日期</td><td>${escapeHtml(c.date) || '-'}</td></tr>
-      <tr><td style="color:var(--muted)">比赛地点</td><td>${escapeHtml(c.location) || '-'}</td>
-          <td style="color:var(--muted)">评委个数</td><td>${c.judge_count || '-'}</td></tr>
-      <tr><td style="color:var(--muted)">备注说明</td><td colspan="3">${escapeHtml(c.description) || '-'}</td></tr>`;
+      <tr><td style="width:120px;color:var(--muted)">比赛名称</td><td>${escapeHtml(c.name)}</td></tr>
+      <tr><td style="width:120px;color:var(--muted)">评委个数</td><td>${c.judge_count || '-'}</td></tr>
+      <tr><td style="width:120px;color:var(--muted)">备注说明</td><td>${escapeHtml(c.description) || '-'}</td></tr>`;
 
     renderResultTable(lbRes.data);
   } catch (err) {
