@@ -425,6 +425,36 @@ table.data tr.record-group-row .record-hint { font-size: 12px; }
 table.data tr.record-detail-row td { background: #fff; font-size: 12.5px; }
 table.data tr.record-detail-row:first-child td { border-top: 0; }
 
+/* ---------- 计分记录表：固定列宽，折叠/展开不抖动 ---------- */
+table.data.score-records-table {
+  table-layout: fixed;
+  width: 100%;
+}
+table.data.score-records-table col.col-player { width: 140px; }
+table.data.score-records-table col.col-judge { width: 110px; }
+table.data.score-records-table col.col-subject { width: 88px; }
+table.data.score-records-table col.col-subtotal { width: 88px; }
+table.data.score-records-table col.col-actions { width: 220px; }
+/* 单元格内容不换行 */
+table.data.score-records-table td,
+table.data.score-records-table th {
+  white-space: nowrap;
+}
+/* 长文本截断省略 */
+table.data.score-records-table th,
+table.data.score-records-table tr.record-group-row td:nth-child(1),
+table.data.score-records-table .record-hint {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 操作列按钮横向排列 */
+table.data.score-records-table .actions {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  flex-wrap: nowrap;
+}
+
 /* ---------- 计分弹窗：评委进度 pills ---------- */
 .judge-pills {
   display: flex;
@@ -763,40 +793,20 @@ table.data tr.record-detail-row:first-child td { border-top: 0; }
     margin: 2px;
   }
 
-  /* ---------- 计分记录面板：选手/评委/操作列优化，避免文字被拆多行 ---------- */
-  /* 选手列、评委进度列：强制不换行并设定最小宽度 */
-  table.data tr.record-group-row td:nth-child(1),
-  table.data tr.record-group-row td:nth-child(2),
-  table.data tr.record-detail-row td:nth-child(2) {
-    white-space: nowrap;
-  }
-  table.data tr.record-group-row td:nth-child(1) { min-width: 76px; }
-  table.data tr.record-group-row td:nth-child(2) { min-width: 84px; }
-  /* 分数 / 小计单元格不换行，避免数值被拆 */
-  table.data td.score-cell,
-  table.data tr.record-detail-row td.fw-700 {
-    white-space: nowrap;
-  }
-  /* 折叠态提示文字在小屏下隐藏内容（保留单元格占位以维持列对齐） */
-  table.data tr.record-group-row .record-hint {
-    font-size: 0;
-    line-height: 0;
-    padding-left: 4px;
-    padding-right: 4px;
-  }
-  /* 操作列：按钮紧凑、允许换行但各自不拆字 */
-  table.data tr.record-group-row td:last-child {
-    min-width: 96px;
-  }
-  table.data tr.record-group-row td:last-child .actions {
+  /* ---------- 计分记录面板：固定列宽移动端适配 ---------- */
+  table.data.score-records-table col.col-player { width: 96px; }
+  table.data.score-records-table col.col-judge { width: 76px; }
+  table.data.score-records-table col.col-subject { width: 60px; }
+  table.data.score-records-table col.col-subtotal { width: 60px; }
+  table.data.score-records-table col.col-actions { width: 156px; }
+  /* 操作按钮：紧凑、允许换行 */
+  table.data.score-records-table .actions {
     flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 2px 6px;
+    gap: 4px;
   }
-  table.data tr.record-group-row .actions .btn-link {
+  table.data.score-records-table .actions .btn {
     padding: 4px 8px;
-    font-size: 12px;
-    white-space: nowrap;
+    font-size: 11px;
   }
 
   /* ---------- 空状态 ---------- */
