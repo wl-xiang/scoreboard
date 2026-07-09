@@ -136,12 +136,19 @@ async function loadScores() {
 function renderScoreRecords(scores) {
   const thead = document.getElementById('score-head');
   const tbody = document.getElementById('score-records');
+  const colgroup = document.getElementById('score-colgroup');
   const players = comp.players || [];
   const subjects = comp.subjects || [];
 
+  // 列宽固定：避免折叠/展开时列宽抖动
+  let cg = '<col class="col-player"><col class="col-judge">';
+  subjects.forEach(() => { cg += '<col class="col-subject">'; });
+  cg += '<col class="col-subtotal"><col class="col-actions">';
+  colgroup.innerHTML = cg;
+
   // 表头：选手 | 评委 | 各科目 | 小计 | 操作
   let head = '<tr><th>选手</th><th class="num">评委</th>';
-  subjects.forEach(s => { head += `<th class="num">${escapeHtml(s.name)}</th>`; });
+  subjects.forEach(s => { head += `<th class="num" title="${escapeHtml(s.name)}">${escapeHtml(s.name)}</th>`; });
   head += '<th class="num">小计</th><th class="num">操作</th></tr>';
   thead.innerHTML = head;
 
@@ -183,9 +190,9 @@ function renderScoreRecords(scores) {
       <td class="num">${enteredCount}/${totalJudges || enteredCount} 已录入</td>
       <td colspan="${judgeSpan}" class="text-muted record-hint">${expanded ? '' : '点击「查看」展开各评委评分'}</td>
       <td class="num"><div class="actions">
-        <button class="btn-link" onclick="togglePlayerRecord(${pid})">${expanded ? '折叠' : '查看'}</button>
-        <button class="btn-link" onclick="editRecord(${pid})">编辑</button>
-        <button class="btn-link danger" onclick="deletePlayerRecord(${pid})">删除</button>
+        <button class="btn btn-sm" onclick="togglePlayerRecord(${pid})">${expanded ? '折叠' : '查看'}</button>
+        <button class="btn btn-sm btn-primary" onclick="editRecord(${pid})">编辑</button>
+        <button class="btn btn-sm btn-danger" onclick="deletePlayerRecord(${pid})">删除</button>
       </div></td>
     </tr>`;
 
