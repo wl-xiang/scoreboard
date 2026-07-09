@@ -321,9 +321,9 @@ function renderScoreModal() {
 
       <div id="fast-area" class="${isFast ? '' : 'hide'}">
         <div class="form-group">
-          <label>分数字符串（以空格分隔）</label>
-          <textarea id="fast-input" placeholder="例如：9.5 8.7 9.0 9.2"></textarea>
-          <div class="hint">直接点「保存」也会自动提取；超出科目总数将截取前 N 个。</div>
+          <label>分数字符串（空格或顿号分隔）</label>
+          <textarea id="fast-input" placeholder="例如：9.5 8.7 9.0 9.2 或 9.5、8.7、9.0、9.2"></textarea>
+          <div class="hint">支持空格或顿号（、）分隔；直接点「保存」也会自动提取；超出科目总数将截取前 N 个。</div>
         </div>
         <button class="btn btn-accent" onclick="autoExtract()">自动提取分数</button>
       </div>
@@ -357,13 +357,34 @@ function onModalPlayerChange(playerIdStr) {
 
 function renderSubjectInputs(subjects, existing) {
   const tbody = document.getElementById('subject-inputs');
-  tbody.innerHTML = subjects.map((s, i) => `
-    <tr>
+  tbody.innerHTML = subjects.map((s, i) => {
+    const max = (s.max_score != null ? s.max_score : 100);
+    const val = existing[s.id] != null ? existing[s.id] : '';
+    return `<tr>
       <td class="num">${i + 1}</td>
       <td>${escapeHtml(s.name)}</td>
-      <td class="num">${s.max_score}</td>
-      <td><input type="number" step="0.01" class="subj-score" data-sid="${s.id}" value="${existing[s.id] != null ? existing[s.id] : ''}" placeholder="0"></td>
-    </tr>`).join('');
+      <td class="num">${max}</td>
+      <td><input type="number" step="0.01" min="0" max="${max}" class="subj-score" data-sid="${s.id}" data-max="${max}" data-name="${escapeHtml(s.name)}" value="${val}" placeholder="0~${max}" oninput="onSubjScoreInput(this)"></td>
+    </tr>`;
+  }).join('');
+}
+
+/* 单科目分数输入实时校验：超过满分或为负数时高亮提示 */
+function onSubjScoreInput(inp) {
+  const raw = (inp.value || '').trim();
+  inp.classList.remove('invalid');
+  if (raw === '') return;
+  const v = parseFloat(raw);
+  if (isNaN(v)) { inp.classList.add('invalid'); return; }
+  const max = parseFloat(inp.dataset.max);
+  const name = inp.dataset.name || '该科目';
+  if (v < 0) {
+    inp.classList.add('invalid');
+    toast(`科目「${name}」分数不能为负数`, 'warning', 1800);
+  } else if (!isNaN(max) && v > max) {
+    inp.classList.add('invalid');
+    toast(`科目「${name}」分数 ${v} 超过满分 ${max}`, 'warning', 1800);
+  }
 }
 
 function switchMode(mode) {
@@ -380,7 +401,7 @@ function applyFastExtract() {
   if (!el) return false;
   const raw = el.value.trim();
   if (!raw) return false;
-  const nums = raw.split(/\s+/).map(x => parseFloat(x)).filter(x => !isNaN(x));
+  const nums = raw.split(/[\s、]+/).map(x => parseFloat(x)).filter(x => !isNaN(x));
   if (!nums.length) return false;
   const inputs = document.querySelectorAll('.subj-score');
   const n = inputs.length;
@@ -392,12 +413,21 @@ function autoExtract() {
   const el = document.getElementById('fast-input');
   const raw = (el && el.value || '').trim();
   if (!raw) { toast('请输入分数字符串', 'error'); return; }
-  const nums = raw.split(/\s+/).map(x => parseFloat(x)).filter(x => !isNaN(x));
+  const nums = raw.split(/[\s、]+/).map(x => parseFloat(x)).filter(x => !isNaN(x));
   const inputs = document.querySelectorAll('.subj-score');
   const n = inputs.length;
   inputs.forEach((inp, i) => { inp.value = i < nums.length ? nums[i] : ''; });
+  // 提取后逐项校验是否超出满分，超出的输入框高亮提示
+  let overflowCount = 0;
+  inputs.forEach((inp, i) => {
+    if (i >= nums.length) { inp.classList.remove('invalid'); return; }
+    onSubjScoreInput(inp);
+    if (inp.classList.contains('invalid')) overflowCount++;
+  });
   if (nums.length > n) {
     toast(`已提取前 ${n} 个数字（输入共 ${nums.length} 个）`, 'warning');
+  } else if (overflowCount > 0) {
+    toast(`有 ${overflowCount} 个科目分数超出满分，已标红，请修正后再保存`, 'warning');
   } else {
     toast(`已填充 ${Math.min(nums.length, n)} 个科目`, 'success');
   }
@@ -417,11 +447,25 @@ async function saveCurrentJudge(goNext) {
 
   const inputs = document.querySelectorAll('.subj-score');
   const scores = [];
+  // 清理上一次的标红状态
+  inputs.forEach(inp => inp.classList.remove('invalid'));
   for (const inp of inputs) {
     const sid = parseInt(inp.dataset.sid, 10);
     const raw = (inp.value || '').trim();
     const v = raw === '' ? 0 : parseFloat(raw);
-    if (isNaN(v)) { toast('存在分数格式错误', 'error'); return; }
+    if (isNaN(v)) { toast('存在分数格式错误', 'error'); inp.classList.add('invalid'); inp.focus(); return; }
+    // 满分校验：分数不得超出该科目满分，也不能为负数
+    const subj = (comp.subjects || []).find(s => s.id === sid);
+    const max = subj ? subj.max_score : null;
+    const subjName = (subj && subj.name) || inp.dataset.name || '该科目';
+    if (max != null && v > max) {
+      toast(`科目「${subjName}」分数 ${v} 超过满分 ${max}，请修正后再保存`, 'error');
+      inp.classList.add('invalid'); inp.focus(); return;
+    }
+    if (v < 0) {
+      toast(`科目「${subjName}」分数不能为负数`, 'error');
+      inp.classList.add('invalid'); inp.focus(); return;
+    }
     scores.push({ subject_id: sid, score: v });
   }
   if (!scores.length) { toast('无科目可保存', 'error'); return; }

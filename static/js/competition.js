@@ -141,6 +141,7 @@ function openEditModal() {
       <div class="form-group"><label>备注说明</label><input id="e-desc" value="${escapeHtml(c.description)}"></div>
       <div class="form-group">
         <label>评分科目 <span class="req">*</span></label>
+        <div class="hint mb">至少配置一个科目；每项科目需设置满分，录入成绩时分数不得超过该满分。</div>
         <div id="edit-subject-list"></div>
         <button class="btn btn-sm mt" onclick="addEditSubjectRow()">+ 添加科目</button>
       </div>
