@@ -83,7 +83,7 @@ function openCreateModal() {
       <div class="form-group"><label>备注说明</label><input id="c-desc" placeholder="选填"></div>
       <div class="form-group">
         <label>评分科目 <span class="req">*</span></label>
-        <div class="hint mb">至少配置一个科目；科目顺序即录入与计分顺序。</div>
+        <div class="hint mb">至少配置一个科目；科目顺序即录入与计分顺序。每项科目需设置满分，录入成绩时分数不得超过该满分。</div>
         <div id="subject-list"></div>
         <button class="btn btn-sm mt" onclick="addSubjectRow()">+ 添加科目</button>
       </div>

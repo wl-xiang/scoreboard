@@ -398,6 +398,10 @@ table.data .actions { display: flex; gap: 6px; justify-content: center; }
 /* ---------- 科目行 / 计分录入表格 ---------- */
 .score-input-table th, .score-input-table td { text-align: center; }
 .score-input-table input { width: 90px; text-align: center; padding: 7px; }
+.score-input-table input.invalid {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+}
 
 .mode-switch { display: flex; gap: 10px; margin-bottom: 14px; }
 .mode-switch label {
@@ -757,6 +761,42 @@ table.data tr.record-detail-row:first-child td { border-top: 0; }
     font-size: 11px;
     padding: 2px 6px;
     margin: 2px;
+  }
+
+  /* ---------- 计分记录面板：选手/评委/操作列优化，避免文字被拆多行 ---------- */
+  /* 选手列、评委进度列：强制不换行并设定最小宽度 */
+  table.data tr.record-group-row td:nth-child(1),
+  table.data tr.record-group-row td:nth-child(2),
+  table.data tr.record-detail-row td:nth-child(2) {
+    white-space: nowrap;
+  }
+  table.data tr.record-group-row td:nth-child(1) { min-width: 76px; }
+  table.data tr.record-group-row td:nth-child(2) { min-width: 84px; }
+  /* 分数 / 小计单元格不换行，避免数值被拆 */
+  table.data td.score-cell,
+  table.data tr.record-detail-row td.fw-700 {
+    white-space: nowrap;
+  }
+  /* 折叠态提示文字在小屏下隐藏内容（保留单元格占位以维持列对齐） */
+  table.data tr.record-group-row .record-hint {
+    font-size: 0;
+    line-height: 0;
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+  /* 操作列：按钮紧凑、允许换行但各自不拆字 */
+  table.data tr.record-group-row td:last-child {
+    min-width: 96px;
+  }
+  table.data tr.record-group-row td:last-child .actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 2px 6px;
+  }
+  table.data tr.record-group-row .actions .btn-link {
+    padding: 4px 8px;
+    font-size: 12px;
+    white-space: nowrap;
   }
 
   /* ---------- 空状态 ---------- */
