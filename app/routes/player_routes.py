@@ -1,4 +1,5 @@
 """选手管理路由：增删改，删除后编号自动重排。"""
+import re
 from flask import Blueprint, request, jsonify
 from ..auth import require_auth
 from ..models import Competition, Player
@@ -36,6 +37,27 @@ def add_player(cid):
     db.session.add(p)
     db.session.commit()
     return jsonify({'code': 0, 'message': '已添加选手', 'data': player_to_dict(p)})
+
+
+@player_bp.route('/competitions/<int:cid>/players/batch', methods=['POST'])
+@require_auth
+def add_players_batch(cid):
+    """批量录入选手：支持用顿号或空格分隔的姓名字符串。"""
+    c = Competition.query.get_or_404(cid)
+    if c.status == 'ongoing':
+        return jsonify({'code': 400, 'message': '比赛进行中，禁止修改选手信息'}), 400
+    data = request.get_json(silent=True) or {}
+    raw = data.get('names') or ''
+    names = [n.strip() for n in re.split(r'[\s、]+', raw) if n.strip()]
+    if not names:
+        return jsonify({'code': 400, 'message': '未识别到有效姓名'}), 400
+    start_seq = Player.query.filter_by(competition_id=cid).count() + 1
+    for i, name in enumerate(names):
+        db.session.add(Player(competition_id=cid, name=name, remark='',
+                              seq=start_seq + i))
+    db.session.commit()
+    return jsonify({'code': 0, 'message': '已批量添加 %d 名选手' % len(names),
+                    'data': {'count': len(names)}})
 
 
 @player_bp.route('/players/<int:pid>', methods=['PUT'])

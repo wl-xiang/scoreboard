@@ -101,6 +101,34 @@ def create_competition():
     return jsonify({'code': 0, 'message': '创建成功', 'data': comp_to_dict(c, include_children=True)})
 
 
+@competition_bp.route('/competitions/<int:cid>/copy', methods=['POST'])
+@require_auth
+def copy_competition(cid):
+    """复制比赛：科目始终随比赛一起复制；可选是否一并复制选手。计分记录不复制。"""
+    c = Competition.query.get_or_404(cid)
+    data = request.get_json(silent=True) or {}
+    include_players = bool(data.get('include_players', False))
+    new_name = (data.get('name') or '').strip() or (c.name + ' 副本')
+    new_c = Competition(
+        name=new_name,
+        description=c.description or '',
+        judge_count=c.judge_count,
+        status='draft',
+    )
+    db.session.add(new_c)
+    db.session.flush()
+    for i, s in enumerate(sorted(c.subjects, key=lambda x: x.seq), 1):
+        db.session.add(Subject(competition_id=new_c.id, name=s.name,
+                               max_score=s.max_score, seq=i))
+    if include_players:
+        for i, p in enumerate(sorted(c.players, key=lambda x: x.seq), 1):
+            db.session.add(Player(competition_id=new_c.id, name=p.name,
+                                  remark=p.remark, seq=i))
+    db.session.commit()
+    return jsonify({'code': 0, 'message': '已复制',
+                    'data': comp_to_dict(new_c, include_children=True)})
+
+
 @competition_bp.route('/competitions/<int:cid>', methods=['GET'])
 @require_auth
 def get_competition(cid):
