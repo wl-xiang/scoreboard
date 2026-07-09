@@ -111,9 +111,10 @@ function renderLeaderboard(d) {
       cells += `<td class="score-cell">${v != null ? v : '-'}</td>`;
     });
     const cls = p.rank <= 3 ? 'top' + p.rank : '';
+    const notJoined = p.has_scores ? '' : '<span class="lb-tag-notjoined">(未参赛)</span>';
     return `<tr class="${cls}">
       <td class="num rank-cell">${rankCell(p.rank)}</td>
-      <td>${escapeHtml(p.name)} ${p.has_scores ? '' : '<span class="text-muted" style="font-size:11px">(未参赛)</span>'}</td>
+      <td><span class="lb-name-text">${escapeHtml(p.name)}</span>${notJoined}</td>
       ${cells}
       <td class="num final-score">${p.final_score}</td>
     </tr>`;

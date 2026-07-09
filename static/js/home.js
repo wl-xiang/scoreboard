@@ -85,7 +85,17 @@ function openCreateModal() {
         <label>评分科目 <span class="req">*</span></label>
         <div class="hint mb">至少配置一个科目；科目顺序即录入与计分顺序。每项科目需设置满分，录入成绩时分数不得超过该满分。</div>
         <div id="subject-list"></div>
-        <button class="btn btn-sm mt" onclick="addSubjectRow()">+ 添加科目</button>
+        <div class="flex gap-sm mt">
+          <button class="btn btn-sm" onclick="addSubjectRow()">+ 添加科目</button>
+          <button class="btn btn-sm" onclick="toggleBatchSubjects()">批量添加科目</button>
+        </div>
+        <div id="batch-subject-box" class="hide mt">
+          <textarea id="batch-subject-input" placeholder="用顿号或空格分隔，例如：形象 技艺、台风 表现力"></textarea>
+          <div class="form-row mt">
+            <div class="form-group" style="margin:0"><label>默认最高分</label><input type="number" id="batch-subject-max" min="0" step="0.1" value="100"></div>
+          </div>
+          <button class="btn btn-sm btn-accent mt" onclick="applyBatchSubjects()">提取并添加</button>
+        </div>
       </div>
     </div>
     <div class="modal-foot">
@@ -105,6 +115,22 @@ function addSubjectRow(name = '', maxScore = 100) {
     <input class="s-max" type="number" min="0" step="0.1" value="${maxScore}" style="width:110px" placeholder="满分">
     <button class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">删除</button>`;
   box.appendChild(row);
+}
+
+function toggleBatchSubjects() {
+  document.getElementById('batch-subject-box').classList.toggle('hide');
+}
+
+function applyBatchSubjects() {
+  const raw = document.getElementById('batch-subject-input').value;
+  const names = parseDelimitedNames(raw);
+  if (!names.length) { toast('未识别到有效科目名称', 'error'); return; }
+  let max = parseFloat(document.getElementById('batch-subject-max').value);
+  if (isNaN(max) || max < 0) max = 100;
+  names.forEach(n => addSubjectRow(n, max));
+  document.getElementById('batch-subject-input').value = '';
+  document.getElementById('batch-subject-box').classList.add('hide');
+  toast(`已添加 ${names.length} 个科目`, 'success');
 }
 
 async function submitCreate() {

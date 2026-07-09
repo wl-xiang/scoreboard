@@ -81,6 +81,11 @@ async function downloadAuth(url) {
 
 function qs(name) { return new URLSearchParams(location.search).get(name); }
 
+/* 将用顿号（、）或空格分隔的字符串拆分为姓名/名称数组，自动去空白与空项 */
+function parseDelimitedNames(str) {
+  return (str || '').split(/[\s、]+/).map(s => s.trim()).filter(Boolean);
+}
+
 /* 登录守卫：页面加载时调用，未登录跳转登录页 */
 function requireLogin() {
   if (!Auth.isLoggedIn()) { location.href = '/'; return false; }

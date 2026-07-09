@@ -49,12 +49,15 @@ function renderCompetition() {
   actions.innerHTML = '';
   if (c.status === 'draft') {
     actions.innerHTML += `<button class="btn" onclick="openEditModal()">编辑</button>`;
+    actions.innerHTML += `<button class="btn" onclick="openCopyModal()">复制</button>`;
     actions.innerHTML += `<button class="btn btn-primary" onclick="location.href='/scoring.html?id=${c.id}'">开始比赛</button>`;
   } else if (c.status === 'ongoing') {
     actions.innerHTML += `<button class="btn btn-accent" onclick="location.href='/scoring.html?id=${c.id}'">进入计分</button>`;
+    actions.innerHTML += `<button class="btn" onclick="openCopyModal()">复制</button>`;
     actions.innerHTML += `<button class="btn btn-ghost" disabled title="进行中不可编辑">编辑</button>`;
   } else {
     actions.innerHTML += `<button class="btn btn-primary" onclick="location.href='/result.html?id=${c.id}'">查看结果</button>`;
+    actions.innerHTML += `<button class="btn" onclick="openCopyModal()">复制</button>`;
   }
 
   // 选手增删按钮（进行中禁用）
@@ -62,7 +65,8 @@ function renderCompetition() {
   if (c.status === 'ongoing') {
     addWrap.innerHTML = `<span class="badge badge-ongoing">进行中·禁止修改选手</span>`;
   } else {
-    addWrap.innerHTML = `<button class="btn btn-sm btn-primary" onclick="openPlayerModal()">+ 添加选手</button>`;
+    addWrap.innerHTML = `<button class="btn btn-sm" onclick="openBatchPlayerModal()">批量录入</button>` +
+      `<button class="btn btn-sm btn-primary" onclick="openPlayerModal()">+ 添加选手</button>`;
   }
 }
 
@@ -128,6 +132,35 @@ async function deletePlayer(pid, name) {
   } catch (err) { toast(err.message, 'error'); }
 }
 
+/* ---------- 选手批量录入（顿号或空格分隔） ---------- */
+function openBatchPlayerModal() {
+  openModal(`
+    <div class="modal-head"><h3>批量录入选手</h3><button class="close" onclick="closeModal()">×</button></div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>选手姓名 <span class="req">*</span></label>
+        <textarea id="bp-input" placeholder="用顿号或空格分隔，例如：张三 李四、王五 赵六"></textarea>
+        <div class="hint">支持用顿号（、）或空格分隔，将自动提取并批量创建选手。</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="submitBatchPlayers()">批量添加</button>
+    </div>`);
+}
+
+async function submitBatchPlayers() {
+  const raw = document.getElementById('bp-input').value;
+  const names = parseDelimitedNames(raw);
+  if (!names.length) { toast('未识别到有效姓名', 'error'); return; }
+  try {
+    const res = await API.post('/api/competitions/' + CID + '/players/batch', { names: raw });
+    toast(res.message, 'success');
+    closeModal();
+    loadCompetition();
+  } catch (err) { toast(err.message, 'error'); }
+}
+
 /* ---------- 比赛编辑（含二次确认：覆盖 / 另存为新比赛） ---------- */
 function openEditModal() {
   const c = compCache;
@@ -143,7 +176,17 @@ function openEditModal() {
         <label>评分科目 <span class="req">*</span></label>
         <div class="hint mb">至少配置一个科目；每项科目需设置满分，录入成绩时分数不得超过该满分。</div>
         <div id="edit-subject-list"></div>
-        <button class="btn btn-sm mt" onclick="addEditSubjectRow()">+ 添加科目</button>
+        <div class="flex gap-sm mt">
+          <button class="btn btn-sm" onclick="addEditSubjectRow()">+ 添加科目</button>
+          <button class="btn btn-sm" onclick="toggleBatchEditSubjects()">批量添加科目</button>
+        </div>
+        <div id="batch-edit-subject-box" class="hide mt">
+          <textarea id="batch-edit-subject-input" placeholder="用顿号或空格分隔，例如：形象 技艺、台风 表现力"></textarea>
+          <div class="form-row mt">
+            <div class="form-group" style="margin:0"><label>默认最高分</label><input type="number" id="batch-edit-subject-max" min="0" step="0.1" value="100"></div>
+          </div>
+          <button class="btn btn-sm btn-accent mt" onclick="applyBatchEditSubjects()">提取并添加</button>
+        </div>
       </div>
     </div>
     <div class="modal-foot">
@@ -164,6 +207,22 @@ function addEditSubjectRow(name = '', maxScore = 100) {
     <input class="s-max" type="number" min="0" step="0.1" value="${maxScore}" style="width:110px" placeholder="满分">
     <button class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">删除</button>`;
   box.appendChild(row);
+}
+
+function toggleBatchEditSubjects() {
+  document.getElementById('batch-edit-subject-box').classList.toggle('hide');
+}
+
+function applyBatchEditSubjects() {
+  const raw = document.getElementById('batch-edit-subject-input').value;
+  const names = parseDelimitedNames(raw);
+  if (!names.length) { toast('未识别到有效科目名称', 'error'); return; }
+  let max = parseFloat(document.getElementById('batch-edit-subject-max').value);
+  if (isNaN(max) || max < 0) max = 100;
+  names.forEach(n => addEditSubjectRow(n, max));
+  document.getElementById('batch-edit-subject-input').value = '';
+  document.getElementById('batch-edit-subject-box').classList.add('hide');
+  toast(`已添加 ${names.length} 个科目`, 'success');
 }
 
 function collectEditSubjects() {
@@ -236,4 +295,42 @@ function showOverwriteConfirm(body) {
       <button class="btn btn-primary" onclick="closeModal(); submitEdit('save_as_new')">另存为新比赛</button>
       <button class="btn btn-danger" onclick="closeModal(); submitEdit('overwrite')">覆盖</button>
     </div>`, { size: '' });
+}
+
+/* ---------- 复制比赛：仅比赛信息 / 比赛与选手 ---------- */
+function openCopyModal() {
+  const c = compCache;
+  openModal(`
+    <div class="modal-head"><h3>复制比赛</h3><button class="close" onclick="closeModal()">×</button></div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>新比赛名称</label>
+        <input id="cp-name" value="${escapeHtml(c.name)} 副本">
+      </div>
+      <p class="text-muted mb">科目始终随比赛一起复制，计分记录不会被复制。请选择是否一并复制选手：</p>
+      <div class="flex gap" style="flex-direction:column">
+        <div class="copy-option" onclick="doCopy(false)">
+          <div class="fw-700">① 仅复制比赛信息</div>
+          <div class="text-muted" style="font-size:12px;margin-top:4px">复制比赛基础信息与评分科目，不包含选手。</div>
+        </div>
+        <div class="copy-option" onclick="doCopy(true)">
+          <div class="fw-700">② 复制比赛与选手</div>
+          <div class="text-muted" style="font-size:12px;margin-top:4px">复制比赛基础信息、评分科目及全部选手。</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal()">取消</button>
+    </div>`);
+}
+
+async function doCopy(includePlayers) {
+  const name = document.getElementById('cp-name').value.trim();
+  try {
+    const res = await API.post('/api/competitions/' + CID + '/copy',
+      { name, include_players: includePlayers });
+    toast(res.message, 'success');
+    closeModal();
+    setTimeout(() => location.href = '/competition.html?id=' + res.data.id, 400);
+  } catch (err) { toast(err.message, 'error'); }
 }
